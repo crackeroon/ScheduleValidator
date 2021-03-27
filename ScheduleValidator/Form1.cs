@@ -245,8 +245,20 @@ namespace ScheduleValidator
 
         private string NormalizeType(string Type)
         {
-            string NewType = Type;
-            return NewType;
+            if (Type == null || Type == string.Empty)
+            {
+                return Type;
+            }
+            if (Type[0] == 'c' || Type[0] == 'с')
+            {
+                return "сем";
+            }
+            if (Type.Length > 1 && Type[1] == 'а')
+            {
+                return "лаб";
+            }
+            // Console.WriteLine(Type + " -> лек");
+            return "лек";
         }
 
         private void importFromXLS(string filename)
