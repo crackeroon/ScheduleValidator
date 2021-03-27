@@ -448,7 +448,7 @@ namespace ScheduleValidator
                                         }
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*$");
                                         }
                                         else
                                         {
@@ -458,6 +458,29 @@ namespace ScheduleValidator
                                                 Type = match.Groups[4].ToString().Trim(),
                                                 Teacher = match.Groups[5].ToString().Trim(),
                                                 Room = match.Groups[6].ToString().Trim(),
+                                                WeekNumber = current_week,
+                                                DayOfWeek = current_weekday,
+                                                LessonNumber = current_lesson
+                                            };
+                                            if (match.Groups[2].ToString() != string.Empty)
+                                            {
+                                                schedule_record.Subgroup = Int32.Parse(match.Groups[2].ToString().Trim());
+                                            };
+                                            ParsedLessons[j++] = schedule_record;
+                                            continue;
+                                        }
+                                        if (match.Success != true)
+                                        {
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
+                                        }
+                                        else
+                                        {
+                                            var schedule_record = new ScheduleRecord()
+                                            {
+                                                Subject = match.Groups[3].ToString().Trim(),
+                                                Teacher = match.Groups[4].ToString().Trim(),
+                                                Room = match.Groups[5].ToString().Trim(),
+                                                Type = match.Groups[6].ToString().Trim(),
                                                 WeekNumber = current_week,
                                                 DayOfWeek = current_weekday,
                                                 LessonNumber = current_lesson
