@@ -20,6 +20,11 @@ namespace ScheduleValidator
         public int ID1;
         public int ID2;
     };
+    struct MyGroup
+    {
+        public string ObjectName;
+        public int ID;
+    };
     struct ScheduleRecord
     {
         public string Subject;
@@ -94,7 +99,7 @@ namespace ScheduleValidator
             group.Columns.Append("Year", ADOX.DataTypeEnum.adInteger);  // курс (год поступления): 20
             group.Columns.Append("Speciality");  // специализация: ИС
             group.Columns.Append("Iteration", ADOX.DataTypeEnum.adInteger);   // если несколько групп одной специализации: /2
-            group.Columns.Append("Subgroup");  // подгруппа по иностранному
+            group.Columns.Append("Subgroup", ADOX.DataTypeEnum.adInteger);  // подгруппа по иностранному
             cat.Tables.Append(group);
 
             room.Name = "Room";
@@ -103,7 +108,6 @@ namespace ScheduleValidator
             room.Columns["Room_ID"].ParentCatalog = cat;
             room.Columns["Room_ID"].Properties["AutoIncrement"].Value = true;
             room.Columns.Append("Name");  // название аудитории 202б
-            room.Columns.Append("Building", ADOX.DataTypeEnum.adInteger);  // корпус здания
             cat.Tables.Append(room);
 
             subject.Name = "Subject";
@@ -281,6 +285,9 @@ namespace ScheduleValidator
                 OleDbConnection conn = new OleDbConnection(this.DSN);
                 conn.Open();
                 var group_cache = new Dictionary<string, StudyGroup>() { };
+                var teacher_cache = new Dictionary<string, MyGroup>() { };
+                var subject_cache = new Dictionary<string, MyGroup>() { };
+                var room_cache = new Dictionary<string, MyGroup>() { };
                 foreach (DataTable table in ds.Tables)
                 {
                     var group_index = new Dictionary<int, StudyGroup>() { };
@@ -322,10 +329,10 @@ namespace ScheduleValidator
                                     int j = 0;
                                     foreach(string sublesson in lessons)
                                     {
-                                        match = Regex.Match(sublesson, "((\\d)\\s?п\\.?\\s*)?([А-Я\\d][а-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*([Ааод\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]*([А-Яа-я]+[\\.,]?\\s?[\\r\\n]*[А-Я]\\.?\\.?[А-Яа-яЁё\\-]+)$");
+                                        match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Я\\d][А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*([Ааод\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]*([А-Яа-я]+[\\.,]?\\s?[\\r\\n]*[А-Я]\\.?\\.?[А-Яа-яЁё\\-]+)$");
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "((\\d)\\s?п\\.?\\s*)?([А-Я\\d][а-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*([Ааод\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]*([А-Яа-яЁё\\-]+\\s?[А-Я]\\.?[А-Я]\\.\\.?)$");
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Я\\d][А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*([Ааод\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]*([А-Яа-яЁё\\-]+\\s?[А-Я]\\.?[А-Я]\\.\\.?)$");
                                         }
                                         else
                                         {
@@ -347,7 +354,7 @@ namespace ScheduleValidator
                                         }
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "((\\d)\\s?п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+([А-Я]?\\.?[А-Я]?\\.?[\\.\\s]?[А-Я][а-яЁё\\-]{3,})\\.?[\\s\\r\\n]+(сем|Сем|лаб|Лаб|лек|сем\\.|cем|сем\\s+сем|с|с\\.|лаб\\.|лек\\.|л\\.|л(?!аб))[\\s\\r\\n]*([АаоПд\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+([А-Я]?\\.?[А-Я]?\\.?[\\.\\s]?[А-Я][а-яЁё\\-]{3,})\\.?[\\s\\r\\n]+(сем|Сем|лаб|Лаб|лек|сем\\.|cем|сем\\s+сем|с|с\\.|лаб\\.|лек\\.|л\\.|л(?!аб))[\\s\\r\\n]*([АаоПд\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
                                         }
                                         else
                                         {
@@ -370,7 +377,7 @@ namespace ScheduleValidator
                                         }
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "((\\d)\\s?п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+([А-Яа-яЁё\\-]+\\s{0,2}[А-Я]\\.?[А-Я]\\.?\\.?)[\\s\\r\\n]*(сем|Сем|лаб|Лаб|лек|сем\\.|сем\\s+сем|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*([АаоПд\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+([А-Яа-яЁё\\-]+\\s{0,2}[А-Я]\\.?[А-Я]\\.?\\.?)[\\s\\r\\n]*(сем|Сем|лаб|Лаб|лек|сем\\.|сем\\s+сем|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*([АаоПд\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
                                         }
                                         else
                                         {
@@ -394,7 +401,7 @@ namespace ScheduleValidator
 
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "((\\d)\\s?п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
                                         }
                                         else
                                         {
@@ -417,7 +424,7 @@ namespace ScheduleValidator
                                         }
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "((\\d)\\s?п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
                                         }
                                         else
                                         {
@@ -440,7 +447,7 @@ namespace ScheduleValidator
                                         }
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "((\\d)\\s?п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+([А-Яа-яЁё\\-]+\\s?[А-Я]\\.?[А-Я]\\.\\.?)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+([А-Яа-яЁё\\-]+\\s?[А-Я]\\.?[А-Я]\\.\\.?)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
                                         }
                                         else
                                         {
@@ -463,7 +470,7 @@ namespace ScheduleValidator
                                         }
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "((\\d)\\s?п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]*$");
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]*$");
                                         }
                                         else
                                         {
@@ -571,7 +578,7 @@ namespace ScheduleValidator
                                         }
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]*$");
+                                            match = Regex.Match(sublesson, "([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|сем \\.|л)[\\s\\r\\n]*$");
                                         }
                                         else
                                         {
@@ -580,6 +587,24 @@ namespace ScheduleValidator
                                                 Subject = match.Groups[1].ToString().Trim(),
                                                 Type = match.Groups[2].ToString().Trim(),
                                                 Room = match.Groups[3].ToString().Trim(),
+                                                WeekNumber = current_week,
+                                                DayOfWeek = current_weekday,
+                                                LessonNumber = current_lesson
+                                            };
+                                            ParsedLessons[j++] = schedule_record;
+                                            continue;
+                                        }
+                                        if (match.Success != true)
+                                        {
+                                            match = Regex.Match(sublesson, "([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]*$");
+                                        }
+                                        else
+                                        {
+                                            var schedule_record = new ScheduleRecord()
+                                            {
+                                                Subject = match.Groups[1].ToString().Trim(),
+                                                Teacher = match.Groups[2].ToString().Trim(),
+                                                Type = match.Groups[3].ToString().Trim(),
                                                 WeekNumber = current_week,
                                                 DayOfWeek = current_weekday,
                                                 LessonNumber = current_lesson
@@ -614,6 +639,73 @@ namespace ScheduleValidator
                                     }
                                     foreach (ScheduleRecord record in ParsedLessons.Values)
                                     {
+                                        int teacher_id = 0;
+                                        int room_id = 0;
+                                        int subject_id = 0;
+                                        if (record.Teacher != string.Empty && record.Teacher != null)
+                                        {
+                                            if (teacher_cache.ContainsKey(record.Teacher) != true)
+                                            {
+                                                MyGroup teacher_group = new MyGroup()
+                                                {
+                                                    ObjectName = record.Teacher,
+                                                    ID = -1
+                                                };
+                                                OleDbCommand cmd = new OleDbCommand();
+                                                cmd.CommandType = CommandType.Text;
+                                                cmd.CommandText = "INSERT INTO [Teacher] ([Name]) VALUES (?);";
+                                                cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = record.Teacher;
+                                                cmd.Connection = conn;
+                                                cmd.ExecuteNonQuery();
+                                                cmd.CommandText = "SELECT @@Identity";
+                                                teacher_group.ID = (int)cmd.ExecuteScalar();
+                                                teacher_cache[record.Teacher] = teacher_group;
+                                            }
+                                            teacher_id = teacher_cache[record.Teacher].ID;
+                                        }
+                                        if (record.Room != string.Empty && record.Room != null)
+                                        {
+                                            if (room_cache.ContainsKey(record.Room) != true)
+                                            {
+                                                MyGroup room_group = new MyGroup()
+                                                {
+                                                    ObjectName = record.Room,
+                                                    ID = -1
+                                                };
+                                                OleDbCommand cmd = new OleDbCommand();
+                                                cmd.CommandType = CommandType.Text;
+                                                cmd.CommandText = "INSERT INTO [Room] ([Name]) VALUES (?);";
+                                                cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = record.Room;
+                                                cmd.Connection = conn;
+                                                cmd.ExecuteNonQuery();
+                                                cmd.CommandText = "SELECT @@Identity";
+                                                room_group.ID = (int)cmd.ExecuteScalar();
+                                                room_cache[record.Room] = room_group;
+                                            }
+                                            room_id = room_cache[record.Room].ID;
+                                        }
+                                        if (record.Subject != string.Empty && record.Subject != null)
+                                        {
+                                            if (subject_cache.ContainsKey(record.Subject) != true)
+                                            {
+                                                MyGroup subject_group = new MyGroup()
+                                                {
+                                                    ObjectName = record.Subject,
+                                                    ID = -1
+                                                };
+                                                OleDbCommand cmd = new OleDbCommand();
+                                                cmd.CommandType = CommandType.Text;
+                                                cmd.CommandText = "INSERT INTO [Subject] ([Name]) VALUES (?);";
+                                                cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = record.Subject;
+                                                cmd.Connection = conn;
+                                                cmd.ExecuteNonQuery();
+                                                cmd.CommandText = "SELECT @@Identity";
+                                                subject_group.ID = (int)cmd.ExecuteScalar();
+                                                subject_cache[record.Subject] = subject_group;
+                                            }
+                                            subject_id = subject_cache[record.Subject].ID;
+                                        }
+                                        // TODO save schedule
                                         Console.WriteLine(record.Subgroup + "п, " + record.Subject + ", " + record.Teacher + ", " + record.Room + ", " + record.Type);
                                     }
                                 }
@@ -653,7 +745,7 @@ namespace ScheduleValidator
                                             if (match.Success == true)
                                             {
                                                 current_week = Int32.Parse(match.Groups[1].Value);
-                                                Console.WriteLine(current_week + " current week");
+                                                //Console.WriteLine(current_week + " current week");
                                             }
                                         }
                                     }
@@ -670,17 +762,19 @@ namespace ScheduleValidator
                                         cmd.Parameters.Add("@Year", OleDbType.Integer).Value = Int32.Parse(year);
                                         cmd.Parameters.Add("@Speciality", OleDbType.VarChar).Value = speciality;
                                         cmd.Parameters.Add("@Iteration", OleDbType.Integer).Value = Int32.Parse(iteration);
-                                        cmd.Parameters.Add("@Subgroup", OleDbType.VarChar).Value = "1п";
+                                        cmd.Parameters.Add("@Subgroup", OleDbType.Integer).Value = 1;
                                         cmd.Connection = conn;
                                         cmd.ExecuteNonQuery();
                                         cmd.CommandText = "SELECT @@Identity";
                                         study_group.ID1 = (int)cmd.ExecuteScalar();
+                                        cmd = new OleDbCommand();
+                                        cmd.CommandType = CommandType.Text;
                                         cmd.CommandText = "INSERT INTO [Group] ([Name],[Year],[Speciality],[Iteration],[Subgroup]) VALUES (?,?,?,?,?);";
                                         cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = groupName;
                                         cmd.Parameters.Add("@Year", OleDbType.Integer).Value = Int32.Parse(year);
                                         cmd.Parameters.Add("@Speciality", OleDbType.VarChar).Value = speciality;
                                         cmd.Parameters.Add("@Iteration", OleDbType.Integer).Value = Int32.Parse(iteration);
-                                        cmd.Parameters.Add("@Subgroup", OleDbType.VarChar).Value = "2п";
+                                        cmd.Parameters.Add("@Subgroup", OleDbType.Integer).Value = 2;
                                         cmd.Connection = conn;
                                         cmd.ExecuteNonQuery();
                                         cmd.CommandText = "SELECT @@Identity";
