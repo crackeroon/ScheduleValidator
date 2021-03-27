@@ -139,6 +139,10 @@ namespace ScheduleValidator
             schedule.Columns.Append("Subject_ID", ADOX.DataTypeEnum.adInteger);  // id предмета
             schedule.Columns.Append("Room_ID", ADOX.DataTypeEnum.adInteger);     // id кабинета
             schedule.Columns.Append("Teacher_ID", ADOX.DataTypeEnum.adInteger);  // id преподавателя
+            schedule.Columns["LessonType"].Attributes = ADOX.ColumnAttributesEnum.adColNullable;
+            // schedule.Columns["LessonType"].Properties["Default"].Value = null;
+            schedule.Columns["Room_ID"].Attributes = ADOX.ColumnAttributesEnum.adColNullable;
+            schedule.Columns["Teacher_ID"].Attributes = ADOX.ColumnAttributesEnum.adColNullable;
             schedule.Keys.Append("ForeignKey_Group_ID", ADOX.KeyTypeEnum.adKeyForeign, "Group_ID", "Group", "Group_ID");
             schedule.Keys.Append("ForeignKey_Subject_ID", ADOX.KeyTypeEnum.adKeyForeign, "Subject_ID", "Subject", "Subject_ID");
             schedule.Keys.Append("ForeignKey_Room_ID", ADOX.KeyTypeEnum.adKeyForeign, "Room_ID", "Room", "Room_ID");
@@ -221,6 +225,28 @@ namespace ScheduleValidator
             {
                 return new OleDbConnection("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + fileName + "; Jet OLEDB:Engine Type=5;Extended Properties=\"Excel 8.0;\"");
             }
+        }
+
+        private string NormalizeName(string teacher)
+        {
+            string name = teacher;
+            Match match = Regex.Match(name, "([А-ЯЁ])[,\\.]?\\s*([А-ЯЁ])[,\\.]?\\s*([А-ЯЁ][а-яё]+)");
+            if (match.Success == true)
+            {
+                name = match.Groups[1].Value + '.' + match.Groups[2].Value + '.' + match.Groups[3].Value;
+            }
+            match = Regex.Match(name, "([А-ЯЁ][а-яё]+)\\s+([А-ЯЁ])[,\\.]?\\s*([А-ЯЁ])[,\\.]?\\s*");
+            if (match.Success == true)
+            {
+                name = match.Groups[2].Value + '.' + match.Groups[3].Value + '.' + match.Groups[1].Value;
+            }
+            return name;
+        }
+
+        private string NormalizeType(string Type)
+        {
+            string NewType = Type;
+            return NewType;
         }
 
         private void importFromXLS(string filename)
@@ -712,26 +738,28 @@ namespace ScheduleValidator
                                         int teacher_id = 0;
                                         int room_id = 0;
                                         int subject_id = 0;
+                                        OleDbCommand cmd;
                                         if (record.Teacher != string.Empty && record.Teacher != null)
                                         {
-                                            if (teacher_cache.ContainsKey(record.Teacher) != true)
+                                            string teacher = this.NormalizeName(record.Teacher);
+                                            if (teacher_cache.ContainsKey(teacher) != true)
                                             {
                                                 MyGroup teacher_group = new MyGroup()
                                                 {
-                                                    ObjectName = record.Teacher,
+                                                    ObjectName = teacher,
                                                     ID = -1
                                                 };
-                                                OleDbCommand cmd = new OleDbCommand();
+                                                cmd = new OleDbCommand();
                                                 cmd.CommandType = CommandType.Text;
                                                 cmd.CommandText = "INSERT INTO [Teacher] ([Name]) VALUES (?);";
-                                                cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = record.Teacher;
+                                                cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = teacher;
                                                 cmd.Connection = conn;
                                                 cmd.ExecuteNonQuery();
                                                 cmd.CommandText = "SELECT @@Identity";
                                                 teacher_group.ID = (int)cmd.ExecuteScalar();
-                                                teacher_cache[record.Teacher] = teacher_group;
+                                                teacher_cache[teacher] = teacher_group;
                                             }
-                                            teacher_id = teacher_cache[record.Teacher].ID;
+                                            teacher_id = teacher_cache[teacher].ID;
                                         }
                                         if (record.Room != string.Empty && record.Room != null)
                                         {
@@ -742,7 +770,7 @@ namespace ScheduleValidator
                                                     ObjectName = record.Room,
                                                     ID = -1
                                                 };
-                                                OleDbCommand cmd = new OleDbCommand();
+                                                cmd = new OleDbCommand();
                                                 cmd.CommandType = CommandType.Text;
                                                 cmd.CommandText = "INSERT INTO [Room] ([Name]) VALUES (?);";
                                                 cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = record.Room;
@@ -763,7 +791,7 @@ namespace ScheduleValidator
                                                     ObjectName = record.Subject,
                                                     ID = -1
                                                 };
-                                                OleDbCommand cmd = new OleDbCommand();
+                                                cmd = new OleDbCommand();
                                                 cmd.CommandType = CommandType.Text;
                                                 cmd.CommandText = "INSERT INTO [Subject] ([Name]) VALUES (?);";
                                                 cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = record.Subject;
@@ -775,7 +803,46 @@ namespace ScheduleValidator
                                             }
                                             subject_id = subject_cache[record.Subject].ID;
                                         }
-                                        // TODO save schedule
+                                        cmd = new OleDbCommand();
+                                        cmd.CommandType = CommandType.Text;
+                                        cmd.CommandText = "INSERT INTO [Schedule] ([WeekNumber], [DayOfWeek], [LessonNumber], [LessonType], [Group_ID], [Subject_ID], [Room_ID], [Teacher_ID]) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+                                        cmd.Parameters.Add("@WeekNumber", OleDbType.Integer).Value = record.WeekNumber;
+                                        cmd.Parameters.Add("@DayOfWeek", OleDbType.Integer).Value = record.DayOfWeek;
+                                        cmd.Parameters.Add("@LessonNumber", OleDbType.Integer).Value = record.LessonNumber;
+                                        string norm_type = this.NormalizeType(record.Type);
+                                        if (norm_type == string.Empty || norm_type == null)
+                                        {
+                                            cmd.Parameters.Add("@LessonType", OleDbType.VarChar).Value = DBNull.Value;
+                                        } else
+                                        {
+                                            cmd.Parameters.Add("@LessonType", OleDbType.VarChar).Value = norm_type;
+                                        }
+                                        if (record.Subgroup == 1)
+                                        {
+                                            cmd.Parameters.Add("@Group_ID", OleDbType.Integer).Value = group_index[i].ID1;
+                                        } else
+                                        {
+                                            cmd.Parameters.Add("@Group_ID", OleDbType.Integer).Value = group_index[i].ID2;
+                                        }
+                                        cmd.Parameters.Add("@Subject_ID", OleDbType.Integer).Value = subject_id;
+                                        if (room_id == 0)
+                                        {
+                                            cmd.Parameters.Add("@Room_ID", OleDbType.VarChar).Value = DBNull.Value;
+                                        }
+                                        else
+                                        {
+                                            cmd.Parameters.Add("@Room_ID", OleDbType.VarChar).Value = room_id;
+                                        }
+                                        if (teacher_id == 0)
+                                        {
+                                            cmd.Parameters.Add("@Teacher_ID", OleDbType.VarChar).Value = DBNull.Value;
+                                        }
+                                        else
+                                        {
+                                            cmd.Parameters.Add("@Teacher_ID", OleDbType.VarChar).Value = teacher_id;
+                                        }
+                                        cmd.Connection = conn;
+                                        cmd.ExecuteNonQuery();
                                         Console.WriteLine(record.Subgroup + "п, " + record.Subject + ", " + record.Teacher + ", " + record.Room + ", " + record.Type);
                                     }
                                 }
