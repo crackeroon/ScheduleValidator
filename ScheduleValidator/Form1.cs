@@ -329,10 +329,10 @@ namespace ScheduleValidator
                                     int j = 0;
                                     foreach(string sublesson in lessons)
                                     {
-                                        match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Я\\d][А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*([Ааод\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]*([А-Яа-я]+[\\.,]?\\s?[\\r\\n]*[А-Я]\\.?\\.?[А-Яа-яЁё\\-]+)$");
+                                        match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-ЯA-Z\\d][А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*([Ааод\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]*([А-Яа-я]+[\\.,]?\\s?[\\r\\n]*[А-Я]\\.?\\.?[А-Яа-яЁё\\-]+)$");
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Я\\d][А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*([Ааод\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]*([А-Яа-яЁё\\-]+\\s?[А-Я]\\.?[А-Я]\\.\\.?)$");
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-ЯA-Z\\d][А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]*([Ааод\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]*([А-Яа-яЁё\\-]+\\s?[А-Я]\\.?[А-Я]\\.\\.?)$");
                                         }
                                         else
                                         {
@@ -401,7 +401,7 @@ namespace ScheduleValidator
 
                                         if (match.Success != true)
                                         {
-                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-ЯA-Z][А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]+([А-Я]\\.?[А-Я]\\.\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
                                         }
                                         else
                                         {
@@ -410,6 +410,29 @@ namespace ScheduleValidator
                                                 Subject = match.Groups[3].ToString().Trim(),
                                                 Teacher = match.Groups[4].ToString().Trim(),
                                                 Type = match.Groups[5].ToString().Trim(),
+                                                WeekNumber = current_week,
+                                                DayOfWeek = current_weekday,
+                                                Room = match.Groups[6].ToString().Trim(),
+                                                LessonNumber = current_lesson
+                                            };
+                                            if (match.Groups[2].ToString() != string.Empty)
+                                            {
+                                                schedule_record.Subgroup = Int32.Parse(match.Groups[2].ToString().Trim());
+                                            };
+                                            ParsedLessons[j++] = schedule_record;
+                                            continue;
+                                        }
+                                        if (match.Success != true)
+                                        {
+                                            match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]+([А-Яа-яЁё\\-]+\\s?[А-Я]\\.?[А-Я]\\.\\.?)[\\s\\r\\n]+([Аа\\d][\\s\\d/\\.а-я]+)[\\s\\r\\n]*$");
+                                        }
+                                        else
+                                        {
+                                            var schedule_record = new ScheduleRecord()
+                                            {
+                                                Subject = match.Groups[3].ToString().Trim(),
+                                                Type = match.Groups[4].ToString().Trim(),
+                                                Teacher = match.Groups[5].ToString().Trim(),
                                                 WeekNumber = current_week,
                                                 DayOfWeek = current_weekday,
                                                 Room = match.Groups[6].ToString().Trim(),
@@ -433,9 +456,9 @@ namespace ScheduleValidator
                                                 Subject = match.Groups[3].ToString().Trim(),
                                                 Type = match.Groups[4].ToString().Trim(),
                                                 Teacher = match.Groups[5].ToString().Trim(),
+                                                Room = match.Groups[6].ToString().Trim(),
                                                 WeekNumber = current_week,
                                                 DayOfWeek = current_weekday,
-                                                Room = match.Groups[6].ToString().Trim(),
                                                 LessonNumber = current_lesson
                                             };
                                             if (match.Groups[2].ToString() != string.Empty)
