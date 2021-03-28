@@ -43,11 +43,15 @@
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.databaseLabel = new System.Windows.Forms.Label();
             this.textDatabasePath = new System.Windows.Forms.TextBox();
+            this.errors = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.textExcelPath = new System.Windows.Forms.TextBox();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // menuStrip1
             // 
+            this.menuStrip1.GripMargin = new System.Windows.Forms.Padding(2, 2, 0, 2);
             this.menuStrip1.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.fileToolStripMenuItem,
@@ -70,20 +74,20 @@
             this.toolStripMenuItem2,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(83, 36);
+            this.fileToolStripMenuItem.Size = new System.Drawing.Size(91, 36);
             this.fileToolStripMenuItem.Text = "Файл";
             // 
             // newDatabaseToolStripMenuItem
             // 
             this.newDatabaseToolStripMenuItem.Name = "newDatabaseToolStripMenuItem";
-            this.newDatabaseToolStripMenuItem.Size = new System.Drawing.Size(367, 38);
+            this.newDatabaseToolStripMenuItem.Size = new System.Drawing.Size(402, 44);
             this.newDatabaseToolStripMenuItem.Text = "Создать";
             this.newDatabaseToolStripMenuItem.Click += new System.EventHandler(this.newDatabaseToolStripMenuItem_Click);
             // 
             // openDatabaseToolStripMenuItem
             // 
             this.openDatabaseToolStripMenuItem.Name = "openDatabaseToolStripMenuItem";
-            this.openDatabaseToolStripMenuItem.Size = new System.Drawing.Size(367, 38);
+            this.openDatabaseToolStripMenuItem.Size = new System.Drawing.Size(402, 44);
             this.openDatabaseToolStripMenuItem.Text = "Открыть";
             this.openDatabaseToolStripMenuItem.Click += new System.EventHandler(this.openDatabaseToolStripMenuItem_Click);
             // 
@@ -91,32 +95,32 @@
             // 
             this.closeDatabaseToolStripMenuItem.Enabled = false;
             this.closeDatabaseToolStripMenuItem.Name = "closeDatabaseToolStripMenuItem";
-            this.closeDatabaseToolStripMenuItem.Size = new System.Drawing.Size(367, 38);
+            this.closeDatabaseToolStripMenuItem.Size = new System.Drawing.Size(402, 44);
             this.closeDatabaseToolStripMenuItem.Text = "Закрыть";
             this.closeDatabaseToolStripMenuItem.Click += new System.EventHandler(this.closeDatabaseToolStripMenuItem_Click);
             // 
             // toolStripMenuItem1
             // 
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(364, 6);
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(399, 6);
             // 
             // importFromXLSToolStripMenuItem
             // 
             this.importFromXLSToolStripMenuItem.Enabled = false;
             this.importFromXLSToolStripMenuItem.Name = "importFromXLSToolStripMenuItem";
-            this.importFromXLSToolStripMenuItem.Size = new System.Drawing.Size(367, 38);
+            this.importFromXLSToolStripMenuItem.Size = new System.Drawing.Size(402, 44);
             this.importFromXLSToolStripMenuItem.Text = "Импортировать из XLS";
             this.importFromXLSToolStripMenuItem.Click += new System.EventHandler(this.importFromXLSToolStripMenuItem_Click);
             // 
             // toolStripMenuItem2
             // 
             this.toolStripMenuItem2.Name = "toolStripMenuItem2";
-            this.toolStripMenuItem2.Size = new System.Drawing.Size(364, 6);
+            this.toolStripMenuItem2.Size = new System.Drawing.Size(399, 6);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(367, 38);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(402, 44);
             this.exitToolStripMenuItem.Text = "Выход";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
@@ -125,14 +129,14 @@
             this.actionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.checkForErrorsToolStripMenuItem});
             this.actionsToolStripMenuItem.Name = "actionsToolStripMenuItem";
-            this.actionsToolStripMenuItem.Size = new System.Drawing.Size(131, 36);
+            this.actionsToolStripMenuItem.Size = new System.Drawing.Size(139, 36);
             this.actionsToolStripMenuItem.Text = "Действия";
             // 
             // checkForErrorsToolStripMenuItem
             // 
             this.checkForErrorsToolStripMenuItem.Enabled = false;
             this.checkForErrorsToolStripMenuItem.Name = "checkForErrorsToolStripMenuItem";
-            this.checkForErrorsToolStripMenuItem.Size = new System.Drawing.Size(362, 38);
+            this.checkForErrorsToolStripMenuItem.Size = new System.Drawing.Size(397, 44);
             this.checkForErrorsToolStripMenuItem.Text = "Проверить на ошибки";
             this.checkForErrorsToolStripMenuItem.Click += new System.EventHandler(this.checkForErrorsToolStripMenuItem_Click);
             // 
@@ -141,13 +145,13 @@
             this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.aboutToolStripMenuItem});
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
-            this.helpToolStripMenuItem.Size = new System.Drawing.Size(119, 36);
+            this.helpToolStripMenuItem.Size = new System.Drawing.Size(127, 36);
             this.helpToolStripMenuItem.Text = "Справка";
             // 
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(263, 38);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(298, 44);
             this.aboutToolStripMenuItem.Text = "О программе";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
@@ -165,14 +169,46 @@
             this.textDatabasePath.Enabled = false;
             this.textDatabasePath.Location = new System.Drawing.Point(290, 44);
             this.textDatabasePath.Name = "textDatabasePath";
+            this.textDatabasePath.ReadOnly = true;
             this.textDatabasePath.Size = new System.Drawing.Size(472, 31);
             this.textDatabasePath.TabIndex = 2;
+            // 
+            // errors
+            // 
+            this.errors.Location = new System.Drawing.Point(12, 145);
+            this.errors.Multiline = true;
+            this.errors.Name = "errors";
+            this.errors.ReadOnly = true;
+            this.errors.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.errors.Size = new System.Drawing.Size(750, 372);
+            this.errors.TabIndex = 3;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(13, 88);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(172, 25);
+            this.label1.TabIndex = 4;
+            this.label1.Text = "Excel документ:";
+            // 
+            // textExcelPath
+            // 
+            this.textExcelPath.Enabled = false;
+            this.textExcelPath.Location = new System.Drawing.Point(290, 88);
+            this.textExcelPath.Name = "textExcelPath";
+            this.textExcelPath.ReadOnly = true;
+            this.textExcelPath.Size = new System.Drawing.Size(472, 31);
+            this.textExcelPath.TabIndex = 5;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(774, 529);
+            this.Controls.Add(this.textExcelPath);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.errors);
             this.Controls.Add(this.textDatabasePath);
             this.Controls.Add(this.databaseLabel);
             this.Controls.Add(this.menuStrip1);
@@ -203,6 +239,9 @@
         private System.Windows.Forms.ToolStripMenuItem checkForErrorsToolStripMenuItem;
         private System.Windows.Forms.Label databaseLabel;
         private System.Windows.Forms.TextBox textDatabasePath;
+        private System.Windows.Forms.TextBox errors;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.TextBox textExcelPath;
     }
 }
 

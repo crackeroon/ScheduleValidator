@@ -27,6 +27,7 @@ namespace ScheduleValidator
     };
     struct ScheduleRecord
     {
+        public int ID;
         public string Subject;
         public int Subgroup;
         public string Teacher;
@@ -46,18 +47,32 @@ namespace ScheduleValidator
         {
             this.MinimumSize = new Size(800, 600);
             InitializeComponent();
-            this.databasePath = "C:\\Users\\Victoria\\Documents\\test.mdb";
-            this.initDB();
-            //this.databaseOpened(true);
+            this.setDatabasePath("C:\\Users\\Victoria\\Documents\\test.mdb");
+            //this.initDB();
+            this.databaseOpened(true);
             // this.importFromXLS("C:\\Users\\Victoria\\Documents\\Осень-2019-2020.xlsx");
             // this.importFromXLS("C:\\Users\\Victoria\\Documents\\Осень-2018-2019.xls");
             // this.importFromXLS("C:\\Users\\Victoria\\Documents\\Весна-2019-2020.xlsx");
             // this.importFromXLS("C:\\Users\\Victoria\\Documents\\Весна-2018-2019.xls");
-            this.importFromXLS("C:\\Users\\Victoria\\Documents\\Осень-2020-2021.xlsx");
+            // this.importFromXLS("C:\\Users\\Victoria\\Documents\\Осень-2020-2021.xlsx");
+        }
+
+        private void setDatabasePath(string path)
+        {
+            this.databasePath = path;
+            if (path != string.Empty)
+            {
+                this.DSN = "Provider=Microsoft.Jet.OLEDB.4.0;";
+                this.DSN += "Data Source=" + this.databasePath + ";Jet OLEDB:Engine Type=5";
+            } else
+            {
+                this.DSN = string.Empty;
+            }
         }
 
         private void databaseOpened(bool isOpened)
         {
+            errors.Text = "";
             if (isOpened)
             {
                 this.textDatabasePath.Text = this.databasePath;
@@ -80,8 +95,6 @@ namespace ScheduleValidator
             }
             this.databaseOpened(true);
             Catalog cat = new ADOX.Catalog();
-            this.DSN = "Provider=Microsoft.Jet.OLEDB.4.0;";
-            this.DSN += "Data Source=" + this.databasePath + ";Jet OLEDB:Engine Type=5";
             cat.Create(this.DSN);
             ADOX.Table group = new ADOX.Table();
             ADOX.Table room = new ADOX.Table();
@@ -180,8 +193,8 @@ namespace ScheduleValidator
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    
-                    this.databasePath = saveFileDialog.FileName;
+
+                    this.setDatabasePath(saveFileDialog.FileName);
                     this.initDB();
                 }
             }
@@ -200,7 +213,7 @@ namespace ScheduleValidator
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     //Get the path of specified file
-                    this.databasePath = openFileDialog.FileName;
+                    this.setDatabasePath(openFileDialog.FileName);
                     this.databaseOpened(true);
 
                 }
@@ -965,6 +978,7 @@ namespace ScheduleValidator
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
+                    this.initDB();
                     this.importFromXLS(openFileDialog.FileName);
                 }
             }
@@ -978,8 +992,123 @@ namespace ScheduleValidator
 
         private void checkForErrorsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // TODO validate for errors
+            OleDbConnection conn = new OleDbConnection(this.DSN);
+            conn.Open();
 
+            var group_cache = new Dictionary<int, string>() { };
+
+            OleDbCommand command = new OleDbCommand("SELECT [Group_ID], [Name] FROM [Group];", conn);
+
+            OleDbDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                int Group_ID = reader.GetInt32(0);
+                string Name = reader.GetValue(1).ToString();
+                group_cache[Group_ID] = Name;
+            };
+
+            command = new OleDbCommand("SELECT Schedule.Schedule_ID, Schedule.WeekNumber, Schedule.DayOfWeek, Schedule.LessonNumber, Schedule.LessonType, Schedule.Group_ID, Group.Name, Room.Name, Subject.Name, Teacher.Name FROM Teacher INNER JOIN(Subject INNER JOIN(Room INNER JOIN([Group] INNER JOIN Schedule ON Group.Group_ID = Schedule.Group_ID) ON Room.Room_ID = Schedule.Room_ID) ON Subject.Subject_ID = Schedule.Subject_ID) ON Teacher.Teacher_ID = Schedule.Teacher_ID;", conn);
+
+            reader = command.ExecuteReader();
+
+            var single_group = new Dictionary<string, ScheduleRecord>() { };
+            var single_teacher = new Dictionary<string, ScheduleRecord>() { };
+            var single_room = new Dictionary<string, ScheduleRecord>() { };
+            var single_lab = new Dictionary<string, ScheduleRecord>() { };
+            string found_errors = string.Empty;
+            errors.Text = "Поиск ошибок...";
+
+            while (reader.Read())
+            {
+                ScheduleRecord record = new ScheduleRecord()
+                {
+                    ID = reader.GetInt32(0),
+                    WeekNumber = reader.GetInt32(1),
+                    DayOfWeek = reader.GetInt32(2),
+                    LessonNumber = reader.GetInt32(3),
+                    Type = reader.GetString(4),
+                    Subgroup = reader.GetInt32(5),
+                    Room = reader.GetValue(7).ToString(),
+                    Teacher = reader.GetValue(9).ToString(),
+                };
+                // 1.1. Никакая группа не может находится в одном кабинете с двумя и более преподавателями на одной паре,
+                // в одно и то же время; 
+                // 1.2. Никакая группа не может находится в разных кабинетах с одним преподавателем на одной паре,
+                // в одно и то же время;
+                // Group_Name+WeekNumber+DayOfWeek+LessonNumber
+                string key1 = record.Subgroup + "+" + record.WeekNumber + "+" + record.DayOfWeek + "+" + record.LessonNumber;
+                if (single_group.ContainsKey(key1) == true) {
+                    found_errors += "1. Record duplicates: \r\n" +
+                        record.ID + ". group: " + group_cache[record.Subgroup] + ", week: " + record.WeekNumber + ", day of week: " + ((DayOfWeek)record.DayOfWeek).ToString() + ", lesson number: " + record.LessonNumber + ", teacher: " + record.Teacher + ", room: " + record.Room + "\r\n" +
+                        single_group[key1].ID + ". group: " + group_cache[single_group[key1].Subgroup] + ", week: " + single_group[key1].WeekNumber + ", day of week: " + ((DayOfWeek)single_group[key1].DayOfWeek).ToString() + ", lesson number: " + single_group[key1].LessonNumber + ", teacher: " + single_group[key1].Teacher + ", room: " + single_group[key1].Room + "\r\n";
+                } else
+                {
+                    single_group[key1] = record;
+                }
+
+                // 2.1. Никакой преподаватель не может сразу присутствовать в разных кабинетах у одной группы;
+                // 2.2. Никакой преподаватель не может сразу присутствовать в разных кабинетах у нескольких групп;
+                // Teacher_ID+WeekNumber+DayOfWeek+LessonNumber
+                string key2 = record.Teacher + "+" + record.WeekNumber + "+" + record.DayOfWeek + "+" + record.LessonNumber;
+                if (single_teacher.ContainsKey(key2) == true)
+                {
+                    if (record.Room != single_teacher[key2].Room)
+                    {
+                        found_errors += "2. Record duplicates: \r\n" +
+                            record.ID + ". group: " + group_cache[record.Subgroup] + ", week: " + record.WeekNumber + ", day of week: " + ((DayOfWeek)record.DayOfWeek).ToString() + ", lesson number: " + record.LessonNumber + ", teacher: " + record.Teacher + ", room: " + record.Room + "\r\n" +
+                            single_teacher[key2].ID + ". group: " + group_cache[single_teacher[key2].Subgroup] + ", week: " + single_teacher[key2].WeekNumber + ", day of week: " + ((DayOfWeek)single_teacher[key2].DayOfWeek).ToString() + ", lesson number: " + single_teacher[key2].LessonNumber + ", teacher: " + single_teacher[key2].Teacher + ", room: " + single_teacher[key2].Room + "\r\n";
+                    }
+                }
+                else
+                {
+                    single_teacher[key2] = record;
+                }
+
+                // ignore without room_id or teacher_id
+                // WeekNumber+DayOfWeek+LessonNumber+Room_ID=Teacher_ID
+                if (record.Room != null && record.Room != string.Empty && record.Teacher != null && record.Teacher != string.Empty)
+                {
+                    string key3 = record.Room + "+" + record.WeekNumber + "+" + record.DayOfWeek + "+" + record.LessonNumber;
+                    if (single_room.ContainsKey(key3) == true)
+                    {
+                        if (record.Teacher != single_room[key3].Teacher)  // record.Group_Name != group_cache[Group_ID]
+                        {
+                            found_errors += "3. Record duplicates: \r\n" +
+                                record.ID + ". group: " + group_cache[record.Subgroup] + ", week: " + record.WeekNumber + ", day of week: " + ((DayOfWeek)record.DayOfWeek).ToString() + ", lesson number: " + record.LessonNumber + ", teacher: " + record.Teacher + ", room: " + record.Room + "\r\n" +
+                                single_room[key3].ID + ". group: " + group_cache[single_room[key3].Subgroup] + ", week: " + single_room[key3].WeekNumber + ", day of week: " + ((DayOfWeek)single_room[key3].DayOfWeek).ToString() + ", lesson number: " + single_room[key3].LessonNumber + ", teacher: " + single_room[key3].Teacher + ", room: " + single_room[key3].Room + "\r\n";
+                        }
+                    }
+                    else
+                    {
+                        single_room[key3] = record;
+                    }
+                }
+
+                // WeekNumber+DayOfWeek+LessonNumber+Room_ID
+                if (record.Room != null && record.Room != string.Empty)
+                {
+                    string key4 = record.Room + "+" + record.WeekNumber + "+" + record.DayOfWeek + "+" + record.LessonNumber;
+                    if (single_lab.ContainsKey(key4) == true && (single_lab[key4].Type == "лаб" || record.Type == "лаб") && (group_cache[single_lab[key4].Subgroup] != group_cache[record.Subgroup]))
+                    {
+                        found_errors += "4. Record duplicates: \r\n" +
+                            record.ID + ". group: " + group_cache[record.Subgroup] + ", week: " + record.WeekNumber + ", day of week: " + ((DayOfWeek)record.DayOfWeek).ToString() + ", lesson number: " + record.LessonNumber + ", teacher: " + record.Teacher + ", room: " + record.Room + "\r\n" +
+                            single_lab[key4].ID + ". group: " + group_cache[single_lab[key4].Subgroup] + ", week: " + single_lab[key4].WeekNumber + ", day of week: " + ((DayOfWeek)single_lab[key4].DayOfWeek).ToString() + ", lesson number: " + single_lab[key4].LessonNumber + ", teacher: " + single_lab[key4].Teacher + ", room: " + single_lab[key4].Room + "\r\n";
+                    } else
+                    {
+                        single_lab[key4] = record;
+                    }
+                }
+
+            }
+            if (found_errors != string.Empty)
+            {
+                errors.Text = found_errors;
+            } else
+            {
+                errors.Text = "Ошибки не найдены";
+            }
+            reader.Close();
+            conn.Close();
         }
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
