@@ -23,25 +23,35 @@ namespace ScheduleValidator
 
         void do_login(bool register = false)
         {
-            if (this.name.Text == String.Empty || this.pass.Text == String.Empty)
+            var configFile = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            var settings = configFile.AppSettings.Settings;
+            var name = this.name.Text;
+            var pass = this.pass.Text;
+            if (String.IsNullOrEmpty(name) || String.IsNullOrEmpty(pass))
             {
                 MessageBox.Show("Пустые логин или пароль", "Ошибка!");
                 return;
             }
-            NameValueCollection sAll;
-            sAll = ConfigurationManager.AppSettings;
 
             if (register)
             {
-            } else
+                if (settings[name] != null)
+                {
+                    MessageBox.Show("Этот пользователь уже зарегистрирован", "Ошибка!");
+                    return;
+                }
+                settings.Add(name, pass);
+                configFile.Save(ConfigurationSaveMode.Modified);
+                ConfigurationManager.RefreshSection(configFile.AppSettings.SectionInformation.Name);
+            }
+            else
             {
-                string pass = ConfigurationManager.AppSettings.Get(this.name.Text);
-                if (String.IsNullOrEmpty(pass))
+                if (settings[name] == null)
                 {
                     MessageBox.Show("Этот пользователь не зарегистрирован", "Ошибка!");
                     return;
                 }
-                if (pass != this.pass.Text)
+                if (pass != settings[name].Value)
                 {
                     Console.WriteLine(pass);
                     MessageBox.Show("Неправильный логин или пароль", "Ошибка!");
