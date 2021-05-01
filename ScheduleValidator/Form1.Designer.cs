@@ -44,8 +44,6 @@
             this.databaseLabel = new System.Windows.Forms.Label();
             this.textDatabasePath = new System.Windows.Forms.TextBox();
             this.errors = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.textExcelPath = new System.Windows.Forms.TextBox();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -74,7 +72,7 @@
             this.toolStripMenuItem2,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(91, 36);
+            this.fileToolStripMenuItem.Size = new System.Drawing.Size(91, 38);
             this.fileToolStripMenuItem.Text = "Файл";
             // 
             // newDatabaseToolStripMenuItem
@@ -129,7 +127,7 @@
             this.actionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.checkForErrorsToolStripMenuItem});
             this.actionsToolStripMenuItem.Name = "actionsToolStripMenuItem";
-            this.actionsToolStripMenuItem.Size = new System.Drawing.Size(139, 36);
+            this.actionsToolStripMenuItem.Size = new System.Drawing.Size(139, 38);
             this.actionsToolStripMenuItem.Text = "Действия";
             // 
             // checkForErrorsToolStripMenuItem
@@ -145,7 +143,7 @@
             this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.aboutToolStripMenuItem});
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
-            this.helpToolStripMenuItem.Size = new System.Drawing.Size(127, 36);
+            this.helpToolStripMenuItem.Size = new System.Drawing.Size(127, 38);
             this.helpToolStripMenuItem.Text = "Справка";
             // 
             // aboutToolStripMenuItem
@@ -175,39 +173,19 @@
             // 
             // errors
             // 
-            this.errors.Location = new System.Drawing.Point(12, 145);
+            this.errors.Location = new System.Drawing.Point(12, 98);
             this.errors.Multiline = true;
             this.errors.Name = "errors";
             this.errors.ReadOnly = true;
             this.errors.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.errors.Size = new System.Drawing.Size(750, 372);
+            this.errors.Size = new System.Drawing.Size(750, 419);
             this.errors.TabIndex = 3;
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(13, 88);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(172, 25);
-            this.label1.TabIndex = 4;
-            this.label1.Text = "Excel документ:";
-            // 
-            // textExcelPath
-            // 
-            this.textExcelPath.Enabled = false;
-            this.textExcelPath.Location = new System.Drawing.Point(290, 88);
-            this.textExcelPath.Name = "textExcelPath";
-            this.textExcelPath.ReadOnly = true;
-            this.textExcelPath.Size = new System.Drawing.Size(472, 31);
-            this.textExcelPath.TabIndex = 5;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(774, 529);
-            this.Controls.Add(this.textExcelPath);
-            this.Controls.Add(this.label1);
             this.Controls.Add(this.errors);
             this.Controls.Add(this.textDatabasePath);
             this.Controls.Add(this.databaseLabel);
@@ -240,8 +218,6 @@
         private System.Windows.Forms.Label databaseLabel;
         private System.Windows.Forms.TextBox textDatabasePath;
         private System.Windows.Forms.TextBox errors;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.TextBox textExcelPath;
     }
 }
 

@@ -47,9 +47,10 @@ namespace ScheduleValidator
         {
             this.MinimumSize = new Size(800, 600);
             InitializeComponent();
-            this.setDatabasePath("C:\\Users\\Victoria\\Documents\\test.mdb");
+           // this.setDatabasePath("C:\\Users\\Victoria\\Documents\\test.mdb");
+            //
             //this.initDB();
-            this.databaseOpened(true);
+            //this.databaseOpened(true);
             // this.importFromXLS("C:\\Users\\Victoria\\Documents\\Осень-2019-2020.xlsx");
             // this.importFromXLS("C:\\Users\\Victoria\\Documents\\Осень-2018-2019.xls");
             // this.importFromXLS("C:\\Users\\Victoria\\Documents\\Весна-2019-2020.xlsx");
@@ -1038,7 +1039,7 @@ namespace ScheduleValidator
                 // Group_Name+WeekNumber+DayOfWeek+LessonNumber
                 string key1 = record.Subgroup + "+" + record.WeekNumber + "+" + record.DayOfWeek + "+" + record.LessonNumber;
                 if (single_group.ContainsKey(key1) == true) {
-                    found_errors += "1. Record duplicates: \r\n" +
+                    found_errors += "1 тип ошибок: \r\n" +
                         record.ID + ". group: " + group_cache[record.Subgroup] + ", week: " + record.WeekNumber + ", day of week: " + ((DayOfWeek)record.DayOfWeek).ToString() + ", lesson number: " + record.LessonNumber + ", teacher: " + record.Teacher + ", room: " + record.Room + "\r\n" +
                         single_group[key1].ID + ". group: " + group_cache[single_group[key1].Subgroup] + ", week: " + single_group[key1].WeekNumber + ", day of week: " + ((DayOfWeek)single_group[key1].DayOfWeek).ToString() + ", lesson number: " + single_group[key1].LessonNumber + ", teacher: " + single_group[key1].Teacher + ", room: " + single_group[key1].Room + "\r\n";
                 } else
@@ -1054,7 +1055,7 @@ namespace ScheduleValidator
                 {
                     if (record.Room != single_teacher[key2].Room)
                     {
-                        found_errors += "2. Record duplicates: \r\n" +
+                        found_errors += "2 тип ошибок: \r\n" +
                             record.ID + ". group: " + group_cache[record.Subgroup] + ", week: " + record.WeekNumber + ", day of week: " + ((DayOfWeek)record.DayOfWeek).ToString() + ", lesson number: " + record.LessonNumber + ", teacher: " + record.Teacher + ", room: " + record.Room + "\r\n" +
                             single_teacher[key2].ID + ". group: " + group_cache[single_teacher[key2].Subgroup] + ", week: " + single_teacher[key2].WeekNumber + ", day of week: " + ((DayOfWeek)single_teacher[key2].DayOfWeek).ToString() + ", lesson number: " + single_teacher[key2].LessonNumber + ", teacher: " + single_teacher[key2].Teacher + ", room: " + single_teacher[key2].Room + "\r\n";
                     }
@@ -1073,7 +1074,7 @@ namespace ScheduleValidator
                     {
                         if (record.Teacher != single_room[key3].Teacher)  // record.Group_Name != group_cache[Group_ID]
                         {
-                            found_errors += "3. Record duplicates: \r\n" +
+                            found_errors += "3 тип ошибок: \r\n" +
                                 record.ID + ". group: " + group_cache[record.Subgroup] + ", week: " + record.WeekNumber + ", day of week: " + ((DayOfWeek)record.DayOfWeek).ToString() + ", lesson number: " + record.LessonNumber + ", teacher: " + record.Teacher + ", room: " + record.Room + "\r\n" +
                                 single_room[key3].ID + ". group: " + group_cache[single_room[key3].Subgroup] + ", week: " + single_room[key3].WeekNumber + ", day of week: " + ((DayOfWeek)single_room[key3].DayOfWeek).ToString() + ", lesson number: " + single_room[key3].LessonNumber + ", teacher: " + single_room[key3].Teacher + ", room: " + single_room[key3].Room + "\r\n";
                         }
@@ -1090,7 +1091,7 @@ namespace ScheduleValidator
                     string key4 = record.Room + "+" + record.WeekNumber + "+" + record.DayOfWeek + "+" + record.LessonNumber;
                     if (single_lab.ContainsKey(key4) == true && (single_lab[key4].Type == "лаб" || record.Type == "лаб") && (group_cache[single_lab[key4].Subgroup] != group_cache[record.Subgroup]))
                     {
-                        found_errors += "4. Record duplicates: \r\n" +
+                        found_errors += "4 тип ошибок: \r\n" +
                             record.ID + ". group: " + group_cache[record.Subgroup] + ", week: " + record.WeekNumber + ", day of week: " + ((DayOfWeek)record.DayOfWeek).ToString() + ", lesson number: " + record.LessonNumber + ", teacher: " + record.Teacher + ", room: " + record.Room + "\r\n" +
                             single_lab[key4].ID + ". group: " + group_cache[single_lab[key4].Subgroup] + ", week: " + single_lab[key4].WeekNumber + ", day of week: " + ((DayOfWeek)single_lab[key4].DayOfWeek).ToString() + ", lesson number: " + single_lab[key4].LessonNumber + ", teacher: " + single_lab[key4].Teacher + ", room: " + single_lab[key4].Room + "\r\n";
                     } else
