@@ -25,6 +25,12 @@ namespace ScheduleValidator
         public string ObjectName;
         public int ID;
     };
+    struct MyRoom
+    {
+        public string ObjectName;
+        public int ID;
+        public string Type;
+    };
     struct ScheduleRecord
     {
         public int ID;
@@ -121,7 +127,20 @@ namespace ScheduleValidator
             room.Keys.Append("PrimaryKey", KeyTypeEnum.adKeyPrimary, "Room_ID");
             room.Columns["Room_ID"].ParentCatalog = cat;
             room.Columns["Room_ID"].Properties["AutoIncrement"].Value = true;
-            room.Columns.Append("Name");  // название аудитории 202б
+            room.Columns.Append("Name");  // название аудитории: 202б
+
+
+            /* ADOX.Column type_column = new ADOX.Column();
+            type_column.ParentCatalog = cat;
+            type_column.Name = "Type";
+            type_column.Type = DataTypeEnum.adVarChar;
+            room.Columns.Append(type_column, ADOX.DataTypeEnum.adIUnknown, 255); */
+
+
+            room.Columns.Append("Type");  // тип аудитории: None, сем, лаб, лек
+            room.Columns["Type"].Attributes = ADOX.ColumnAttributesEnum.adColNullable;
+            //room.Columns["Type"].Properties["Default"].Value = null;
+            //room.Columns["Type"].Properties["Nullable"].Value = true;
             cat.Tables.Append(room);
 
             subject.Name = "Subject";
@@ -178,6 +197,17 @@ namespace ScheduleValidator
                 con.Close();
 
             System.Runtime.InteropServices.Marshal.FinalReleaseComObject(cat);
+
+            OleDbConnection conn = new OleDbConnection(this.DSN);
+            conn.Open();
+            OleDbCommand cmd = new OleDbCommand();
+            cmd.CommandType = CommandType.Text;
+            cmd.Connection = conn;
+            cmd.CommandText = "INSERT INTO [Room] ([Name], [Type]) VALUES (\"337\", \"лек\");";
+            cmd.ExecuteNonQuery();
+            cmd.CommandText = "INSERT INTO [Room] ([Name], [Type]) VALUES (\"115\", \"лаб\");";
+            cmd.ExecuteNonQuery();
+            conn.Close();
         }
 
         private void newDatabaseToolStripMenuItem_Click(object sender, EventArgs e)
@@ -340,6 +370,20 @@ namespace ScheduleValidator
                 var teacher_cache = new Dictionary<string, MyGroup>() { };
                 var subject_cache = new Dictionary<string, MyGroup>() { };
                 var room_cache = new Dictionary<string, MyGroup>() { };
+
+                OleDbCommand command = new OleDbCommand("SELECT [Room_ID], [Name] FROM [Room];", conn);
+                OleDbDataReader reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    string Name = reader.GetValue(1).ToString();
+                    MyGroup room_group = new MyGroup()
+                    {
+                        ObjectName = Name,
+                        ID = reader.GetInt32(0)
+                    };
+                    room_cache[Name] = room_group;
+                };
+
                 foreach (DataTable table in ds.Tables)
                 {
                     var group_index = new Dictionary<int, StudyGroup>() { };
@@ -798,7 +842,7 @@ namespace ScheduleValidator
                                                 };
                                                 cmd = new OleDbCommand();
                                                 cmd.CommandType = CommandType.Text;
-                                                cmd.CommandText = "INSERT INTO [Room] ([Name]) VALUES (?);";
+                                                cmd.CommandText = "INSERT INTO [Room] ([Name], [Type]) VALUES (?, NULL);";
                                                 cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = record.Room;
                                                 cmd.Connection = conn;
                                                 cmd.ExecuteNonQuery();
@@ -997,6 +1041,7 @@ namespace ScheduleValidator
             conn.Open();
 
             var group_cache = new Dictionary<int, string>() { };
+            var room_cache = new Dictionary<string, MyRoom>() { };
 
             OleDbCommand command = new OleDbCommand("SELECT [Group_ID], [Name] FROM [Group];", conn);
 
@@ -1006,6 +1051,21 @@ namespace ScheduleValidator
                 int Group_ID = reader.GetInt32(0);
                 string Name = reader.GetValue(1).ToString();
                 group_cache[Group_ID] = Name;
+            };
+
+            command = new OleDbCommand("SELECT [Room_ID], [Name], [Type] FROM [Room];", conn);
+
+            reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                string Name = reader.GetValue(1).ToString();
+                MyRoom room_group = new MyRoom()
+                {
+                    ObjectName = Name,
+                    ID = reader.GetInt32(0),
+                    Type = reader.GetValue(2).ToString()
+                };
+                room_cache[Name] = room_group;
             };
 
             command = new OleDbCommand("SELECT Schedule.Schedule_ID, Schedule.WeekNumber, Schedule.DayOfWeek, Schedule.LessonNumber, Schedule.LessonType, Schedule.Group_ID, Group.Name, Room.Name, Subject.Name, Teacher.Name FROM Teacher INNER JOIN(Subject INNER JOIN(Room INNER JOIN([Group] INNER JOIN Schedule ON Group.Group_ID = Schedule.Group_ID) ON Room.Room_ID = Schedule.Room_ID) ON Subject.Subject_ID = Schedule.Subject_ID) ON Teacher.Teacher_ID = Schedule.Teacher_ID;", conn);
@@ -1100,6 +1160,15 @@ namespace ScheduleValidator
                     }
                 }
 
+                // lesson type is not matches to room type
+                if (record.Room != null && record.Room != string.Empty)
+                {
+                    if (room_cache.ContainsKey(record.Room) == true && (room_cache[record.Room].Type != null && room_cache[record.Room].Type != string.Empty && room_cache[record.Room].Type != record.Type))
+                    {
+                        found_errors += "5 тип ошибок: \r\n" +
+                            record.ID + ". group: " + group_cache[record.Subgroup] + ", week: " + record.WeekNumber + ", day of week: " + ((DayOfWeek)record.DayOfWeek).ToString() + ", lesson number: " + record.LessonNumber + ", teacher: " + record.Teacher + ", room: " + record.Room + ", " + room_cache[record.Room].Type + " != " + record.Type + "\r\n";
+                    }
+                }
             }
             if (found_errors != string.Empty)
             {
