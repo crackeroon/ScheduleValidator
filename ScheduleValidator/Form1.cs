@@ -257,15 +257,16 @@ namespace ScheduleValidator
             this.databaseOpened(false);
         }
 
+        // определяем подходящий драйвер по расширению файла
         private OleDbConnection returnXlsConnection(string fileName)
         {
             string extension = Path.GetExtension(fileName);
             Console.WriteLine(fileName);
-            if (extension == ".xlsx")
+            if (extension == ".xlsx")  // если современный формат - используем новый драйвер
             {
                 return new OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" + fileName + ";Extended Properties=Excel 12.0;");
             }
-            else
+            else  // иначе старый
             {
                 return new OleDbConnection("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + fileName + "; Jet OLEDB:Engine Type=5;Extended Properties=\"Excel 8.0;\"");
             }
@@ -312,44 +313,44 @@ namespace ScheduleValidator
             string caption = "Импорт данных из XLS";
 
             DataSet ds = new DataSet();
-            using (OleDbConnection con = this.returnXlsConnection(filename))
+            using (OleDbConnection con = this.returnXlsConnection(filename))  // открываем xls файл с нужным драйвером
             {
-                using (OleDbCommand cmd = new OleDbCommand())
+                using (OleDbCommand cmd = new OleDbCommand())  // создаем переменную для чтения из xls
                 {
-                    using (OleDbDataAdapter oda = new OleDbDataAdapter())
+                    using (OleDbDataAdapter oda = new OleDbDataAdapter())  // создаем адаптер для хранения таблиц из листов xls
                     {
                         cmd.Connection = con;
                         try
                         {
                             con.Open();
                         }
-                        catch (System.Data.OleDb.OleDbException) {
-                            MessageBox.Show(message, caption);
+                        catch (System.Data.OleDb.OleDbException) {  // если файл неверного формата или недоступен
+                            MessageBox.Show(message, caption);  // или другая ошибка - выводим ее
                             return;
                         }
                         finally
                         {
 
                         }
-                        DataTable dtExcelSchema = con.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
-                        for (int i = 0; i < dtExcelSchema.Rows.Count; i++)
+                        DataTable dtExcelSchema = con.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);  // получаем схему xls со всеми листами
+                        for (int i = 0; i < dtExcelSchema.Rows.Count; i++)  // перебираем все листы из схемы
                         {
                             sheetName = dtExcelSchema.Rows[i]["TABLE_NAME"].ToString();
-                            if (sheetName.Contains("Область_печати") || sheetName.Contains("Print_Area"))
+                            if (sheetName.Contains("Область_печати") || sheetName.Contains("Print_Area"))  // пропускаем дублирующиеся листы вида Лист1$Область_печати
                             {
                                 continue;
                             }
                             Console.WriteLine(sheetName);
                             DataTable dt = new DataTable(sheetName);
                             cmd.Connection = con;
-                            cmd.CommandText = "SELECT * FROM [" + sheetName + "]";
+                            cmd.CommandText = "SELECT * FROM [" + sheetName + "]";  // выьипаем все ячейки из текущего листа (лист1,лист2... )
                             oda.SelectCommand = cmd;
                             Console.WriteLine(oda.ToString());
                             try
                             {
                                 oda.Fill(dt);
                                 dt.TableName = sheetName;
-                                ds.Tables.Add(dt);
+                                ds.Tables.Add(dt);  // добавляем в датасет дататайбл
                             }
                             catch (System.Data.OleDb.OleDbException) { }
                             finally
@@ -362,20 +363,23 @@ namespace ScheduleValidator
                     }
                 }
             }
-            if (ds != null && ds.Tables[0] != null)
+            if (ds != null && ds.Tables[0] != null)  // если найдены страницы(листы) 
             {
-                OleDbConnection conn = new OleDbConnection(this.DSN);
-                conn.Open();
+                OleDbConnection conn = new OleDbConnection(this.DSN);  // создаем соединение с БД
+                conn.Open();  // открытие бд 
+                // создаем кэши для хранения уникальных индексов групп, учителей, предметов, классов
                 var group_cache = new Dictionary<string, StudyGroup>() { };
                 var teacher_cache = new Dictionary<string, MyGroup>() { };
                 var subject_cache = new Dictionary<string, MyGroup>() { };
                 var room_cache = new Dictionary<string, MyGroup>() { };
 
-                OleDbCommand command = new OleDbCommand("SELECT [Room_ID], [Name] FROM [Room];", conn);
+                // инициализируем кэш с классами/аудиториями, у которых явно указан тип(лек,сем,лаб) для будущих проверок
+                // при вставке аудитории мы будем знать, что она уже есть, исключит дубли
+                OleDbCommand command = new OleDbCommand("SELECT [Room_ID], [Name] FROM [Room];", conn); 
                 OleDbDataReader reader = command.ExecuteReader();
                 while (reader.Read())
                 {
-                    string Name = reader.GetValue(1).ToString();
+                    string Name = reader.GetValue(1).ToString();  // name
                     MyGroup room_group = new MyGroup()
                     {
                         ObjectName = Name,
@@ -384,29 +388,38 @@ namespace ScheduleValidator
                     room_cache[Name] = room_group;
                 };
 
-                foreach (DataTable table in ds.Tables)
+                foreach (DataTable table in ds.Tables)  // каждый лист из всех листов
                 {
-                    var group_index = new Dictionary<int, StudyGroup>() { };
+                    // смещение столбца группы относительно первой группы
+                    // то есть когда мы считываем строку с уроками у нас уроки групп идут подряд для каждой группы
+                    // например:
+                    // английский, физика, химия, литература. а группы при, моис, итсс, итпп
+                    // значит у при - индекс 0, у моис индекс 1, у итсс индекс 2 и у итпп индекс 3
+                    // этот индекс легко вычисляется путем отнятия first_lesson_column (переменной где мы храним колонку впервые встретившейся гпуппы)
+                    // от текущей колонки
+                    var group_index = new Dictionary<int, StudyGroup>() { }; // колонка групп (группа при-ячейка b1, группа моаис -b2...) 
                     Console.WriteLine("Table name: " + table.TableName);
+                    // сохраняем значение координаты для типа встретившизся данных, чтобы в будущем ориентироваться по ним
                     int current_week = -2;
-                    int first_lesson_column = -2;  // -2 -> undefined
-                    int last_lesson_column = -2;
-                    int table_header_row = -2;
+                    int first_lesson_column = -2;  // -2 -> undefined  // первая ячейка на строке с заполненным расписанием(название предмета, преподаватель,аудитория)
+                    int last_lesson_column = -2;  // последняя ячейка на строке с заполненным расписанием(название предмета, преподаватель,аудитория)
+                    int table_header_row = -2;  // строка с названием групп и номером недели(1/2)
                     int last_lesson = 6;
                     int current_weekday = 0;  // sunday
-                    foreach (DataRow row in table.Rows)
+                    foreach (DataRow row in table.Rows)  // построчно считываем таблицу
                     {
-                        int current_row = table.Rows.IndexOf(row);
-                        int current_lesson = -2;
+                        int current_row = table.Rows.IndexOf(row);  // индекс текущей строки
+                        int current_lesson = -2;  // текущая пара
                         if (current_week > 0)
                         {
+                            // вычисляем какой номер пары у ячейки с диплиной,преподом и аудитории
                             string value = row[first_lesson_column - 1].ToString();
                             Match match = Regex.Match(value, "(\\d{1})");
                             if (match.Success == true)
                             {
                                 current_lesson = Int32.Parse(match.Groups[1].Value);
                                 last_lesson = current_lesson;
-                                if (current_lesson == 1)
+                                if (current_lesson == 1)  // если 1 пара, значит начался новый день 
                                 {
                                     current_weekday++;
                                     Console.WriteLine("Day of week: " + ((DayOfWeek)current_weekday).ToString());
@@ -416,24 +429,29 @@ namespace ScheduleValidator
                                 {
                                     var lesson = row[first_lesson_column + i].ToString().Trim();
                                     if (lesson == string.Empty || lesson == ",")
-                                    {
+                                    {   
                                         // Console.WriteLine("empty lesson");
                                         continue;
                                     }
-                                    string[] lessons = Regex.Split(lesson, "\\-\\-+[\\r\\n]*");
+                                    string[] lessons = Regex.Split(lesson, "\\-\\-+[\\r\\n]*");  // если в ячейке с название группы,аудитории и т.п. написаны сразу две подгруппы разделенные "------"
                                     var ParsedLessons = new Dictionary<int, ScheduleRecord>() { };
+                                    // одномерный массив со всеми найденными уроками в ячейке (редко ,когда 2 урока в ячейке)
                                     int j = 0;
-                                    foreach(string sublesson in lessons)
+                                    foreach(string sublesson in lessons)  // поиск уроков с подгруппой, испольщуя нескоолько регулярных выражений извлекаем название уроков, преподатателя, тип занятия
+                                        // так как уроки записанны в разныз форматов использованы множество шаблонов
                                     {
+                                        // lessons представляет собой ячейку где написано 2 урока для разных подгрупп, разделенных чертой, а sublesson когда 
+                                        // в ячейке один урок(общий для всей группы)
+                                        // 
                                         // 2п. Объектно-ориентированнное программирование  лаб 303    Г.А.Жаркова  
                                         match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-ЯA-Z\\d][А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]+([Ааод\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]*([А-Яа-я]+[\\.,]?\\s?[\\r\\n]*[А-Я]\\.?\\.?[А-Яа-яЁё\\-]+)[\\s\\r\\n]*$");
-                                        if (match.Success != true)
+                                        if (match.Success != true)  // если не успешно, то следующий шаблон
                                         {
                                             match = Regex.Match(sublesson, "((\\d)\\s{0,2}п\\.?\\s*)?([А-ЯA-Z\\d][А-Яа-яЁёA-Za-z\\d:/\\(\\)\\-\\.,\\s]+?)[\\s\\r\\n]+(сем|лаб|Лаб|лек|сем\\.|с|с\\.|лаб\\.|лек\\.|л\\.|л)[\\s\\r\\n]+([Ааод\\d][\\s\\d/\\.а-я]+?)[\\s\\r\\n]+([А-Яа-яЁё\\-]+\\s?[А-Я]\\.?[А-Я]\\.\\.?)[\\s\\r\\n]*$");
                                         }
                                         else
                                         {
-                                            var schedule_record = new ScheduleRecord() {
+                                            var schedule_record = new ScheduleRecord() {  // структура которую будем записывать в бд
                                                 Subject = match.Groups[3].ToString().Trim(),
                                                 Type = match.Groups[4].ToString().Trim(),
                                                 Room = match.Groups[5].ToString().Trim(),
@@ -442,7 +460,7 @@ namespace ScheduleValidator
                                                 Teacher = match.Groups[6].ToString().Trim(),
                                                 LessonNumber = current_lesson
                                             };
-                                            if (match.Groups[2].ToString() != string.Empty)
+                                            if (match.Groups[2].ToString() != string.Empty) // преобразуем в строку 1п выбирается только число 1
                                             {
                                                 schedule_record.Subgroup = Int32.Parse(match.Groups[2].ToString().Trim());
                                             };
@@ -794,7 +812,9 @@ namespace ScheduleValidator
                                             ParsedLessons[j++] = schedule_record;
                                             continue;
                                         }
-                                    }
+                                    } // foreach (string sublesson in lessons)
+                                    // если найден только один урок и в нем не указана подгруппа, то считаем,
+                                    // что этот урок будет у обеих подгрупп
                                     if (ParsedLessons.Values.Count == 1 && ParsedLessons.Values.First().Subgroup == 0)
                                     {
                                         ScheduleRecord record = ParsedLessons[0];
@@ -803,7 +823,8 @@ namespace ScheduleValidator
                                         record.Subgroup = 1;
                                         ParsedLessons[0] = record;
                                     }
-                                    foreach (ScheduleRecord record in ParsedLessons.Values)
+                                    foreach (ScheduleRecord record in ParsedLessons.Values) 
+                                        // начинаем сохранять распарсенные уроки
                                     {
                                         int teacher_id = 0;
                                         int room_id = 0;
@@ -854,9 +875,13 @@ namespace ScheduleValidator
                                         }
                                         if (record.Subject != string.Empty && record.Subject != null)
                                         {
+                                            // subject_cache - ассоциативный массив, где ключ - название предмента, а значение - стуктура(название + айди в базе)
+                                            // примеры;
+                                            //   математика -> {имя: математеика, айди: 1}
+                                            //   русский язык  ->  {имя: русский язык, айди: 2 }
                                             if (subject_cache.ContainsKey(record.Subject) != true)
                                             {
-                                                MyGroup subject_group = new MyGroup()
+                                                MyGroup subject_group = new MyGroup()  // структура название и id(кэг)
                                                 {
                                                     ObjectName = record.Subject,
                                                     ID = -1
@@ -867,7 +892,7 @@ namespace ScheduleValidator
                                                 cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = record.Subject;
                                                 cmd.Connection = conn;
                                                 cmd.ExecuteNonQuery();
-                                                cmd.CommandText = "SELECT @@Identity";
+                                                cmd.CommandText = "SELECT @@Identity";  // дай номер записи последней вставленной  
                                                 subject_group.ID = (int)cmd.ExecuteScalar();
                                                 subject_cache[record.Subject] = subject_group;
                                             }
@@ -919,19 +944,22 @@ namespace ScheduleValidator
                             }
                             else
                             {
-                                if (last_lesson < 7)
+                                if (last_lesson < 7)  // значит продолжает распасивание
                                 {
                                     continue;
                                 }
                                 break;
                             }
                             continue;
+
                         }
-                        foreach (DataColumn column in table.Columns)
+                        foreach (DataColumn column in table.Columns)  // идём по столбцам
                         {
-                            string value = row[column].ToString();
-                            if (table_header_row == -2 || current_row == table_header_row)  // first of all - find table header
+                            string value = row[column].ToString();  // сохраняем значение строки и столбца
+                            // если заголовок с таблицей не найден, ищем название группы
+                            if (table_header_row == -2 || current_row == table_header_row)  // поиск названия группы first of all - find table header
                             {
+                                // ищем название группы
                                 Match match = Regex.Match(value, "([А-Я]{2,7})\\s*-\\s*([А-Я])\\s*-\\s*(\\d{2,4})\\s*/\\s*(\\d{1})");
                                 if (match.Success == true)
                                 {
@@ -942,28 +970,31 @@ namespace ScheduleValidator
                                     string iteration = match.Groups[4].Value;
                                     string groupName = speciality + '-' + form +  '-' + year + '/' + iteration;
                                     Console.WriteLine(groupName);
-                                    int current_column = table.Columns.IndexOf(column);
-                                    if (first_lesson_column == -2)
+                                    int current_column = table.Columns.IndexOf(column);  //сохраняем текущий индекс текущего столбца
+                                    if (first_lesson_column == -2)  // если не знаем, где колонка с первым уроком
                                     {
                                         first_lesson_column = current_column;
-                                        for(int i = current_column - 1; i >= 0; i--)
+                                        // относительно найденой группы(названия) идём назад
+                                        // когда доходим до числа, то определяем это число как текущая неделя current_week
+                                        for (int i = current_column - 1; i >= 0; i--)
                                         {
                                             match = Regex.Match(row[i].ToString(), "(\\d)");
                                             if (match.Success == true)
                                             {
-                                                current_week = Int32.Parse(match.Groups[1].Value);
+                                                current_week = Int32.Parse(match.Groups[1].Value); // текущая неделя
                                                 //Console.WriteLine(current_week + " current week");
                                             }
                                         }
                                     }
-                                    if (group_cache.ContainsKey(groupName) != true) {
+                                    if (group_cache.ContainsKey(groupName) != true) {  // если текущей группы нет в кэше записываем ее, тк на одном листе 1 неделя, а 2 листе-2
                                         StudyGroup study_group = new StudyGroup() {
                                             GroupName = groupName,
-                                            ID1 = -1,
-                                            ID2 = -1
+                                            ID1 = -1,  // подгруппа 1
+                                            ID2 = -1   // подгруппа 2
                                         };
                                         OleDbCommand cmd = new OleDbCommand();
                                         cmd.CommandType = CommandType.Text;
+                                        //создаётся две подгруппы для каждой групп (здесь 1)
                                         cmd.CommandText = "INSERT INTO [Group] ([Name],[Year],[Speciality],[Iteration],[Subgroup]) VALUES (?,?,?,?,?);";
                                         cmd.Parameters.Add("@Name", OleDbType.VarChar).Value = groupName;
                                         cmd.Parameters.Add("@Year", OleDbType.Integer).Value = Int32.Parse(year);
@@ -971,9 +1002,11 @@ namespace ScheduleValidator
                                         cmd.Parameters.Add("@Iteration", OleDbType.Integer).Value = Int32.Parse(iteration);
                                         cmd.Parameters.Add("@Subgroup", OleDbType.Integer).Value = 1;
                                         cmd.Connection = conn;
-                                        cmd.ExecuteNonQuery();
-                                        cmd.CommandText = "SELECT @@Identity";
+                                        cmd.ExecuteNonQuery();  // выполняем запрос, использованные строки записываются в бд
+                                        cmd.CommandText = "SELECT @@Identity";  // получить номер записи последней вставки
                                         study_group.ID1 = (int)cmd.ExecuteScalar();
+
+                                        //создаётся две подгруппы для каждой групп (здесь 2)
                                         cmd = new OleDbCommand();
                                         cmd.CommandType = CommandType.Text;
                                         cmd.CommandText = "INSERT INTO [Group] ([Name],[Year],[Speciality],[Iteration],[Subgroup]) VALUES (?,?,?,?,?);";
@@ -988,7 +1021,9 @@ namespace ScheduleValidator
                                         study_group.ID2 = (int)cmd.ExecuteScalar();
                                         group_cache[groupName] = study_group;
                                     }
-                                    group_index[current_column - first_lesson_column] = group_cache[groupName];
+                                    // Присваиваем индексу группы значение из кэша (там хранится номер группы), а индекс группы нужен в работе с excel
+                                    group_index[current_column - first_lesson_column] = group_cache[groupName];  // 
+                                    // last_lesson_column - последняя группа в шапке (по строке) , которой присваивается текущей столбец, когда получилось распарсить название группы, в текущем столбце
                                     last_lesson_column = current_column;
                                 }
 
@@ -1185,5 +1220,7 @@ namespace ScheduleValidator
         {
             // TODO show about window
         }
+
+       
     }
 }
